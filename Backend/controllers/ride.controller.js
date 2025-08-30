@@ -60,6 +60,10 @@ module.exports.getFare = async (req, res) => {
     }
 }
 
+const { validationResult } = require("express-validator");
+const rideModel = require("../models/rideModel");
+const { sendMessageToSocketId } = require("../socket/socket");
+
 module.exports.confirmRide = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -67,22 +71,41 @@ module.exports.confirmRide = async (req, res) => {
     }
 
     const { rideId } = req.body;
+    const captainId = req.captain._id; 
 
     try {
-        const ride = await rideService.confirmRide({ rideId, captain: req.captain });
+        // Atomic update: only allow if ride is still "waiting"
+        const ride = await rideModel.findOneAndUpdate(
+            { _id: rideId, status: "waiting" },
+            { $set: { captain: captainId, status: "confirmed" } },
+            { new: true }
+        ).populate("user captain");
 
+        if (!ride) {
+            // Someone else already confirmed
+            return res.status(400).json({ message: "Ride already taken" });
+        }
+
+        // Notify the user that ride is confirmed
         sendMessageToSocketId(ride.user.socketId, {
-            event: 'ride-confirmed',
-            data: ride
-        })
+            event: "ride-confirmed",
+            data: ride,
+        });
+
+        // Notify the captain that they got the ride
+        sendMessageToSocketId(req.captain.socketId, {
+            event: "ride-confirmed",
+            data: ride,
+        });
 
         return res.status(200).json(ride);
-    } catch (err) {
 
-        console.log(err);
+    } catch (err) {
+        console.error(err);
         return res.status(500).json({ message: err.message });
     }
-}
+};
+
 
 module.exports.startRide = async (req, res) => {
     const errors = validationResult(req);
