@@ -76,7 +76,7 @@ module.exports.confirmRide = async (req, res) => {
     try {
         // Atomic update: only allow if ride is still "waiting"
         const ride = await rideModel.findOneAndUpdate(
-            { _id: rideId, status: "waiting" },
+            { _id: rideId, status: "pending" },
             { $set: { captain: captainId, status: "confirmed" } },
             { new: true }
         ).populate("user captain");
