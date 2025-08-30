@@ -1,5 +1,6 @@
 import React from 'react'
 
+//for  user
 const ConfirmRide = (props) => {
     return (
         <div>
