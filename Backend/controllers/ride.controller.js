@@ -79,7 +79,7 @@ module.exports.confirmRide = async (req, res) => {
             { _id: rideId, status: "pending" },
             { $set: { captain: captainId, status: "accepted" } },
             { new: true }
-        ).populate("user captain");
+        ).populate('captain');
 
         if (!ride) {
             // Someone else already confirmed
